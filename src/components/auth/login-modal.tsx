@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
@@ -12,8 +13,12 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [error, setError] = useState('')
-  const { login, isLoading } = useAuth()
+  const { login, loginWithEmail, signUpWithEmail, isLoading } = useAuth()
 
   const handleGoogleLogin = async () => {
     setError('')
@@ -26,23 +31,66 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
   }
 
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (!email || !password) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    if (mode === 'signup' && !name) {
+      setError('Please enter your name')
+      return
+    }
+
+    try {
+      if (mode === 'signin') {
+        await loginWithEmail(email, password)
+      } else {
+        await signUpWithEmail(email, password, name)
+      }
+      onClose()
+      setEmail('')
+      setPassword('')
+      setName('')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : `Failed to ${mode === 'signin' ? 'sign in' : 'sign up'}`
+      setError(errorMessage)
+    }
+  }
+
+  const toggleMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin')
+    setError('')
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Sign in to ShueApp</DialogTitle>
+          <DialogTitle>
+            {mode === 'signin' ? 'Sign in to ShueApp' : 'Create your account'}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
-            Sign in with your Google account to start buying and selling sneakers
+            {mode === 'signin' 
+              ? 'Sign in to start buying and selling sneakers'
+              : 'Create an account to get started'}
           </p>
+          
           {error && (
             <p className="text-sm text-red-500 text-center">{error}</p>
           )}
+
+          {/* Google Sign In */}
           <Button 
             onClick={handleGoogleLogin}
             className="w-full flex items-center justify-center gap-3"
             disabled={isLoading}
+            variant="outline"
           >
             {isLoading ? (
               <>
@@ -61,9 +109,79 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               </>
             )}
           </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with email
+              </span>
+            </div>
+          </div>
+
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailAuth} className="space-y-3">
+            {mode === 'signup' && (
+              <Input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            )}
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {mode === 'signin' ? 'Signing in...' : 'Creating account...'}
+                </>
+              ) : (
+                mode === 'signin' ? 'Sign In' : 'Create Account'
+              )}
+            </Button>
+          </form>
+
+          {/* Toggle between sign in and sign up */}
+          <div className="text-center text-sm">
+            <button
+              type="button"
+              onClick={toggleMode}
+              className="text-primary hover:underline"
+              disabled={isLoading}
+            >
+              {mode === 'signin' 
+                ? "Don't have an account? Sign up" 
+                : 'Already have an account? Sign in'}
+            </button>
+          </div>
+
           <Button 
             type="button" 
-            variant="outline" 
+            variant="ghost" 
             onClick={onClose}
             disabled={isLoading}
             className="w-full"

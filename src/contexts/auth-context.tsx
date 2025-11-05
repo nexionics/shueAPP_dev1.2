@@ -15,6 +15,8 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   login: () => Promise<void>
+  loginWithEmail: (email: string, password: string) => Promise<void>
+  signUpWithEmail: (email: string, password: string, name?: string) => Promise<void>
   logout: () => void
   isLoading: boolean
   isInitializing: boolean
@@ -62,6 +64,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const ensureProfileExists = async (supabaseUser: SupabaseUser) => {
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', supabaseUser.id)
+      .single()
+
+    if (!existingProfile) {
+      await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: supabaseUser.id,
+            email: supabaseUser.email!,
+            name: supabaseUser.user_metadata?.name || null,
+            avatar_url: null,
+          }
+        ])
+    }
+  }
+
   const login = async () => {
     setIsLoading(true)
     try {
@@ -81,6 +104,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const loginWithEmail = async (email: string, password: string) => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      if (data.session?.user) {
+        await ensureProfileExists(data.session.user)
+        await setUserFromSupabase(data.session.user)
+      }
+    } catch (error) {
+      setIsLoading(false)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string, name?: string) => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        throw error
+      }
+
+      if (data.session?.user) {
+        await ensureProfileExists(data.session.user)
+        await setUserFromSupabase(data.session.user)
+      }
+    } catch (error) {
+      setIsLoading(false)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
@@ -92,6 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated: !!user,
       login,
+      loginWithEmail,
+      signUpWithEmail,
       logout,
       isLoading,
       isInitializing
