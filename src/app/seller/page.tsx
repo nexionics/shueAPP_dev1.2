@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import InventoryManagement from '@/components/seller/inventory-management'
 import AuctionManagement from '@/components/seller/auction-management'
+import { SellerLocationSettings } from '@/components/seller/seller-location-settings'
 
 // Mock seller data - in real app this would come from auth/API
 const currentSeller = {
@@ -179,6 +180,11 @@ export default function SellerDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Seller Location Settings */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SellerLocationSettings />
           </div>
         </TabsContent>
 

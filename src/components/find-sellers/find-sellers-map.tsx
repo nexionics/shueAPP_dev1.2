@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MapPin, Star, Shield, Users } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 interface MapLocation {
   id: string
@@ -85,8 +86,67 @@ export function FindSellersMap() {
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null)
   const [showSellers, setShowSellers] = useState(true)
   const [showSafeLocations, setShowSafeLocations] = useState(true)
+  const [sellerLocations, setSellerLocations] = useState<MapLocation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClient()
 
-  const filteredLocations = mockLocations.filter(location => {
+  useEffect(() => {
+    loadSellerLocations()
+  }, [])
+
+  const loadSellerLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('seller_locations')
+        .select(`
+          user_id,
+          zipcode,
+          lat,
+          lng,
+          profiles!inner (
+            id,
+            name,
+            rating
+          )
+        `)
+        .eq('location_enabled', true)
+        .not('lat', 'is', null)
+        .not('lng', 'is', null)
+
+      if (error) {
+        console.error('Error loading seller locations:', error)
+        setIsLoading(false)
+        return
+      }
+
+      if (data) {
+        const sellers: MapLocation[] = data.map((seller) => {
+          const profile = Array.isArray(seller.profiles) ? seller.profiles[0] : seller.profiles
+          return {
+            id: seller.user_id,
+            type: 'seller' as const,
+            name: profile?.name || 'Anonymous Seller',
+            lat: seller.lat!,
+            lng: seller.lng!,
+            rating: profile?.rating || undefined,
+            verified: false,
+            description: `Seller in ${seller.zipcode}`,
+            address: `ZIP ${seller.zipcode}`
+          }
+        })
+        setSellerLocations(sellers)
+      }
+    } catch (error) {
+      console.error('Error loading seller locations:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const safeLocations = mockLocations.filter(loc => loc.type === 'safe-location')
+  const allLocations = [...sellerLocations, ...safeLocations]
+
+  const filteredLocations = allLocations.filter(location => {
     if (location.type === 'seller' && !showSellers) return false
     if (location.type === 'safe-location' && !showSafeLocations) return false
     return true

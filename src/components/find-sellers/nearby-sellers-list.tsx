@@ -1,17 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Star, MapPin, MessageCircle, Shield, Clock } from "lucide-react"
+import { Star, MapPin, MessageCircle, Shield, Clock, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 interface NearbySeller {
   id: string
   name: string
   username: string
   avatar?: string
-  rating: number
+  rating: number | null
   totalSales: number
   distance: number
   verified: boolean
@@ -97,20 +98,82 @@ const mockNearbySellers: NearbySeller[] = [
 
 export function NearbySellersList() {
   const [selectedSeller, setSelectedSeller] = useState<string | null>(null)
+  const [sellers, setSellers] = useState<NearbySeller[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    loadNearbySellers()
+  }, [])
+
+  const loadNearbySellers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('seller_locations')
+        .select(`
+          user_id,
+          zipcode,
+          profiles!inner (
+            id,
+            name,
+            email,
+            rating
+          )
+        `)
+        .eq('location_enabled', true)
+
+      if (error) {
+        console.error('Error loading nearby sellers:', error)
+        setIsLoading(false)
+        return
+      }
+
+      if (data) {
+        const nearbySellers: NearbySeller[] = data.map((seller) => {
+          const profile = Array.isArray(seller.profiles) ? seller.profiles[0] : seller.profiles
+          return {
+            id: seller.user_id,
+            name: profile?.name || 'Anonymous Seller',
+            username: profile?.email?.split('@')[0] || 'user',
+            avatar: undefined,
+            rating: profile?.rating,
+            totalSales: 0,
+            distance: 0,
+            verified: false,
+            lastActive: 'Recently active',
+            specialties: ['Sneakers'],
+            location: `ZIP ${seller.zipcode}`,
+            responseTime: 'Usually responds within a few hours'
+          }
+        })
+        setSellers(nearbySellers)
+      }
+    } catch (error) {
+      console.error('Error loading nearby sellers:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleContactSeller = (sellerId: string) => {
-    // In a real app, this would open a chat or contact form
     console.log("Contacting seller:", sellerId)
   }
 
   const handleViewProfile = (sellerId: string) => {
-    // In a real app, this would navigate to the seller's profile
     console.log("Viewing profile:", sellerId)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-4 max-h-[500px] overflow-y-auto">
-      {mockNearbySellers.map((seller) => (
+      {sellers.map((seller) => (
         <div
           key={seller.id}
           className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
