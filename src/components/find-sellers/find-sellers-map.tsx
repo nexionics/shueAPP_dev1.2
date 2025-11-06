@@ -16,6 +16,8 @@ interface MapLocation {
   verified?: boolean
   description?: string
   address: string
+  inventoryCount?: number
+  isSponsored?: boolean
 }
 
 // Mock data for demonstration
@@ -103,6 +105,7 @@ export function FindSellersMap() {
           zipcode,
           lat,
           lng,
+          is_sponsored,
           profiles!inner (
             id,
             name,
@@ -119,9 +122,29 @@ export function FindSellersMap() {
         return
       }
 
-      if (data) {
-        const sellers: MapLocation[] = data.map((seller) => {
+      if (!data || data.length === 0) {
+        setIsLoading(false)
+        return
+      }
+
+      const { data: inventoryCounts, error: inventoryError } = await supabase
+        .from('product_listings')
+        .select('seller_id')
+        .eq('status', 'active')
+
+      const inventoryMap = new Map<string, number>()
+      if (!inventoryError && inventoryCounts) {
+        inventoryCounts.forEach(item => {
+          const count = inventoryMap.get(item.seller_id) || 0
+          inventoryMap.set(item.seller_id, count + 1)
+        })
+      }
+
+      const sellers: MapLocation[] = data
+        .map((seller) => {
           const profile = Array.isArray(seller.profiles) ? seller.profiles[0] : seller.profiles
+          const inventoryCount = inventoryMap.get(seller.user_id) || 0
+          
           return {
             id: seller.user_id,
             type: 'seller' as const,
@@ -130,12 +153,17 @@ export function FindSellersMap() {
             lng: seller.lng!,
             rating: profile?.rating || undefined,
             verified: false,
-            description: `Seller in ${seller.zipcode}`,
+            inventoryCount,
+            isSponsored: seller.is_sponsored || false,
+            description: inventoryCount > 0 
+              ? `${inventoryCount} shoe${inventoryCount !== 1 ? 's' : ''} available`
+              : 'No inventory currently',
             address: `ZIP ${seller.zipcode}`
           }
         })
-        setSellerLocations(sellers)
-      }
+        .filter(seller => seller.inventoryCount > 0) // Only show sellers with inventory
+
+      setSellerLocations(sellers)
     } catch (error) {
       console.error('Error loading seller locations:', error)
     } finally {
@@ -215,7 +243,9 @@ export function FindSellersMap() {
             <div className={`
               w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110
               ${location.type === 'seller' 
-                ? 'bg-blue-500 text-white' 
+                ? location.isSponsored 
+                  ? 'bg-yellow-500 text-white ring-2 ring-yellow-300' 
+                  : 'bg-blue-500 text-white'
                 : 'bg-green-500 text-white'
               }
               ${selectedLocation?.id === location.id ? 'ring-4 ring-white ring-opacity-50' : ''}

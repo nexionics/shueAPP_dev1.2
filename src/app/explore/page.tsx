@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ItemCard } from "@/components/item-card"
 import { SellerCard } from "@/components/seller-card"
 import { getHomeSectionsWithRealData, formatPrice, getTimeRemaining, Product } from "@/lib/data"
-import { ArrowRight, Clock, Users, Gavel, Ticket, Package, Star, TrendingUp } from "lucide-react"
+import { ArrowRight, Clock, Users, Gavel, Ticket, Package, TrendingUp } from "lucide-react"
 import { ExploreClient } from "./explore-client"
+import { SponsoredProducts } from "@/components/explore/sponsored-products"
+import { Suspense } from "react"
 
 export default function ExplorePage() {
   const sections = getHomeSectionsWithRealData()
@@ -28,23 +29,9 @@ export default function ExplorePage() {
         </section>
 
         {/* Sponsored Products */}
-        <section className="space-y-6 px-4">
-          <div className="flex items-center justify-center space-x-2">
-            <Star className="h-6 w-6 text-yellow-500" />
-            <h2 className="text-3xl font-bold">Sponsored Products</h2>
-            <Star className="h-6 w-6 text-yellow-500" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sections.featuredProducts.slice(0, 4).map((product: Product) => (
-              <div key={product.id} className="relative">
-                <Badge className="absolute top-2 left-2 z-10 bg-yellow-500 text-black">
-                  Sponsored
-                </Badge>
-                <ItemCard product={product} />
-              </div>
-            ))}
-          </div>
-        </section>
+        <Suspense fallback={<div className="text-center py-12">Loading sponsored products...</div>}>
+          <SponsoredProducts />
+        </Suspense>
 
         {/* Popular Products */}
         <section className="space-y-6 px-4">
