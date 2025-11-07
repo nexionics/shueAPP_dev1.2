@@ -10,6 +10,12 @@
  * Run with: npx tsx scripts/seed-product-listings-with-images.ts
  */
 
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// Load environment variables from .env.local
+config({ path: resolve(process.cwd(), '.env.local') })
+
 import { createClient } from '@supabase/supabase-js'
 import productsData from '../data/products.json'
 import { sneaksService } from '../src/lib/sneaks-service'
