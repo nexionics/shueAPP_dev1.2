@@ -2,8 +2,8 @@ import { FindSellersMap } from "@/components/find-sellers/find-sellers-map"
 import { LocationSelector } from "@/components/find-sellers/location-selector"
 import { SafeLocationsList } from "@/components/find-sellers/safe-locations-list"
 import { NearbySellersList } from "@/components/find-sellers/nearby-sellers-list"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/Card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/Tabs"
 import { MapPin, Shield, Users } from "lucide-react"
 
 export default function FindSellersPage() {

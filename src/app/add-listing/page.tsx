@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Select } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { useAuth } from '@/contexts/auth-context'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/Card'
+import { Button } from '@/components/Button'
+import { Input } from '@/components/Input'
+import { Textarea } from '@/components/TextArea'
+import { Select } from '@/components/Select'
+import { Badge } from '@/components/Badge'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   Upload, 
   X, 

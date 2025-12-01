@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { LoginModal } from "@/components/auth/login-modal"
-import { useAuth } from "@/contexts/auth-context"
+import { Button } from "@/components/Button"
+import { LoginModal } from "@/components/auth/LoginModal"
+import { useAuth } from "@/contexts/AuthContext"
 import { ArrowRight, Sparkles, Shield, Users, LogIn } from "lucide-react"
 
 export default function Home() {
@@ -21,18 +21,6 @@ export default function Home() {
                 onClick={() => !isAuthenticated && setShowLoginModal(true)}>
               ShueAPP
             </h1>
-            {!isAuthenticated && (
-              <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4">
-                <Button 
-                  size="sm"
-                  onClick={() => setShowLoginModal(true)}
-                  className="rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-primary/90 hover:bg-primary text-xs sm:text-sm"
-                >
-                  <LogIn className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                  Login
-                </Button>
-              </div>
-            )}
             {isAuthenticated && (
               <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4">
                 <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-medium shadow-lg">

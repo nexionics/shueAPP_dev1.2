@@ -1,0 +1,336 @@
+'use client'
+
+import React, { useState, useCallback, useEffect } from 'react'
+import { Button } from '@/components/Button'
+import { Progress } from '@/components/ui/progress'
+import { RegistrationFormData, FormValidationState, RegistrationStep } from './types'
+import { validateField, isStepValid } from './validation'
+import { AccountInfoStep } from './AccountInfoStep'
+import { LocationInfoStep } from './LocationInfoStep'
+import { PreferencesStep } from './PreferencesStep'
+import { LegalStep } from './LegalStep'
+import { CheckCircle, X, ArrowLeft, ArrowRight } from 'lucide-react'
+import { asModal } from '@/components/hoc'
+import { register } from '@/api/authentication'
+
+interface RegistrationModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSuccess?: (userData: RegistrationFormData) => void
+  onSwitchToLogin?: () => void
+}
+
+const STEP_TITLES = {
+  1: 'Account Information',
+  2: 'Location Details',
+  3: 'Preferences',
+  4: 'Terms & Privacy'
+}
+
+const initialFormData: RegistrationFormData = {
+  fullName: '',
+  username: '',
+  email: '',
+  phoneNumber: '',
+  password: '',
+  confirmPassword: '',
+  city: '',
+  state: '',
+  country: '',
+  zipCode: '',
+  allowLocationPermission: false,
+  agreeToTerms: false,
+  marketingOptIn: false,
+  shoeSize: '',
+  favoriteBrands: [],
+  buyingPreference: undefined
+}
+
+const RegistrationForm: React.FC<RegistrationModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  onSwitchToLogin
+}) => {
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [registrationSuccess, setRegistrationSuccess] = useState(false)
+  const [formData, setFormData] = useState<RegistrationFormData>(initialFormData)
+  const [validationState, setValidationState] = useState<FormValidationState>({} as FormValidationState)
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep(1)
+      setFormData(initialFormData)
+      setValidationState({} as FormValidationState)
+      setRegistrationSuccess(false)
+      setIsLoading(false)
+    }
+  }, [isOpen])
+
+  // Save form data to localStorage for recovery
+  useEffect(() => {
+    if (isOpen) {
+      localStorage.setItem('shueapp_full_registration_draft', JSON.stringify(formData))
+    }
+  }, [formData, isOpen])
+
+  // Load draft data on mount
+  useEffect(() => {
+    if (isOpen) {
+      const draft = localStorage.getItem('shueapp_full_registration_draft')
+      if (draft) {
+        try {
+          const draftData = JSON.parse(draft)
+          setFormData(prev => ({ ...prev, ...draftData }))
+        } catch (error) {
+          console.warn('Failed to load registration draft:', error)
+        }
+      }
+    }
+  }, [isOpen])
+
+  const handleFieldChange = useCallback((field: keyof RegistrationFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }, [])
+
+  const handleFieldBlur = useCallback((field: keyof RegistrationFormData) => {
+    const validation = validateField(field, formData[field], formData)
+    setValidationState(prev => ({
+      ...prev,
+      [field]: validation
+    }))
+  }, [formData])
+
+  const handleNext = useCallback(() => {
+    if (currentStep < 4) {
+      setCurrentStep(prev => (prev + 1) as RegistrationStep)
+    } else {
+      handleSubmitRegistration()
+    }
+  }, [currentStep])
+
+  const handlePrevious = useCallback(() => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => (prev - 1) as RegistrationStep)
+    }
+  }, [currentStep])
+
+  const handleSubmitRegistration = async () => {
+    setIsLoading(true)
+    
+    try {
+      // Validate all required fields one more time
+      const finalValidation = {} as FormValidationState
+      Object.keys(formData).forEach(key => {
+        const field = key as keyof RegistrationFormData
+        finalValidation[field] = validateField(field, formData[field], formData)
+      })
+      
+      setValidationState(finalValidation)
+      
+      // Check if all steps are valid
+      const allStepsValid = [1, 2, 3, 4].every(step => 
+        isStepValid(step, formData, finalValidation)
+      )
+      
+      if (!allStepsValid) {
+        // Find first invalid step and go there
+        for (let step = 1; step <= 4; step++) {
+          if (!isStepValid(step, formData, finalValidation)) {
+            setCurrentStep(step as RegistrationStep)
+            break
+          }
+        }
+        return
+      }
+
+      // Call the actual registration API
+      const result = await register(formData)
+      
+      if (result.success) {
+        // Success!
+        setRegistrationSuccess(true)
+        
+        // Call success callback after a short delay
+        setTimeout(() => {
+          onSuccess?.(formData)
+          handleClose()
+        }, 2000)
+      } else {
+        // Handle registration error
+        console.error('Registration failed:', result.message || result.error)
+        throw new Error(result.message || result.error || 'Registration failed')
+      }
+      
+    } catch (error) {
+      console.error('Registration failed:', error)
+      // Handle registration error here
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleClose = useCallback(() => {
+    if (!isLoading) {
+      // Clear draft data when explicitly closing
+      localStorage.removeItem('shueapp_full_registration_draft')
+      onClose()
+    }
+  }, [isLoading, onClose])
+
+  const getProgressPercentage = () => {
+    return (currentStep / 4) * 100
+  }
+
+  const renderCurrentStep = () => {
+    const stepProps = {
+      formData,
+      validationState,
+      onFieldChange: handleFieldChange,
+      onFieldBlur: handleFieldBlur,
+      onNext: handleNext,
+      onPrevious: handlePrevious,
+      isLoading
+    }
+
+    switch (currentStep) {
+      case 1:
+        return <AccountInfoStep {...stepProps} />
+      case 2:
+        return <LocationInfoStep {...stepProps} />
+      case 3:
+        return <PreferencesStep {...stepProps} />
+      case 4:
+        return <LegalStep {...stepProps} />
+      default:
+        return null
+    }
+  }
+
+  if (!isOpen) {
+    return null
+  }
+
+  if (registrationSuccess) {
+    return (
+      <div className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700 shadow-xl">
+        <div className="text-center py-8">
+          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to ShueApp!</h2>
+          <p className="text-muted-foreground mb-6">
+            Your account has been created successfully. You can now start exploring our sneaker marketplace!
+          </p>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              A verification email has been sent to <strong>{formData.email}</strong>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please verify your email to access all features.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-lg mx-auto max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
+            <p className="text-sm text-muted-foreground">Step {currentStep} of 4: {STEP_TITLES[currentStep]}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            disabled={isLoading}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex justify-between text-xs text-muted-foreground mb-2">
+            <span>Account Info</span>
+            <span>Location</span>
+            <span>Preferences</span>
+            <span>Terms</span>
+          </div>
+          <Progress value={getProgressPercentage()} className="h-2" />
+        </div>
+
+        {/* Step Content */}
+        <div className="min-h-[400px]">
+          {renderCurrentStep()}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 pt-6 border-t border-border">
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-muted-foreground">
+              Already have an account?{' '}
+              <Button
+                variant="link"
+                className="p-0 h-auto text-primary"
+                onClick={onSwitchToLogin}
+                disabled={isLoading}
+              >
+                Sign In
+              </Button>
+            </p>
+            
+            {currentStep > 1 && (
+              <div className="flex items-center text-muted-foreground">
+                <ArrowLeft className="h-3 w-3 mr-1" />
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-muted-foreground hover:text-foreground"
+                  onClick={handlePrevious}
+                  disabled={isLoading}
+                >
+                  Previous Step
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export const RegistrationModal = asModal(RegistrationForm, {
+  closeOnOutsideClick: true,
+  closeOnEscape: true,
+  containerClassName: 'fixed inset-0 z-50 flex items-center justify-center p-4',
+  backdropClassName: 'fixed inset-0 z-40 bg-black/30',
+  portalTarget: null // Explicitly use document.body
+})
+
+// Export a Storybook-friendly version for testing
+export const RegistrationModalForStorybook = (props: RegistrationModalProps) => {
+  if (!props.isOpen) return null
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-40 bg-black/30" />
+      <div className="relative z-50">
+        <RegistrationForm {...props} />
+      </div>
+    </div>
+  )
+}
+
+// Export additional components for testing and stories
+export { AccountInfoStep, LocationInfoStep, PreferencesStep, LegalStep }
+export type { RegistrationModalProps }

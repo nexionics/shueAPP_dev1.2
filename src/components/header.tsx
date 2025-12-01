@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "./theme-toggle"
-import { LoginModal } from "./auth/login-modal"
-import { UserMenu } from "./auth/user-menu"
-import { useAuth } from "@/contexts/auth-context"
+import { Button } from "@/components/Button"
+import { ThemeToggle } from "./ThemeToggle"
+import { LoginModalPortal } from "./auth/LoginModalPortal"
+import { UserMenu } from "./auth/UserMenu"
+import { useAuth } from "@/contexts/AuthContext"
 import { LogIn } from "lucide-react"
 
 export function Header() {
@@ -89,9 +89,10 @@ export function Header() {
           </nav>
         </div>
       </div>
-      <LoginModal 
+      <LoginModalPortal 
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)} 
+        portalTarget="#modal-root"
       />
     </header>
   )

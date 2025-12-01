@@ -1,0 +1,42 @@
+{
+  "jest.jestCommandLine": "npm test --",
+  "jest.rootPath": "./",
+  "jest.autoRun": {
+    "watch": false,
+    "onSave": "test-file",
+    "onStartup": []
+  },
+  "jest.showCoverageOnLoad": false,
+  "jest.coverageFormatter": "DefaultFormatter",
+  "jest.testExplorer": {
+    "enabled": true,
+    "showClassicStatus": true,
+    "showInlineError": true
+  },
+  "jest.useDashedArgs": false,
+  "jest.nodeEnv": {
+    "NODE_ENV": "test"
+  },
+  "jest.runMode": "on-demand",
+  "jest.outputConfig": {
+    "revealOutput": "on-run",
+    "revealWithFocus": "test-results"
+  },
+  "jest.enable": true,
+  "jest.debugMode": true,
+  "jest.pathToJest": "./node_modules/.bin/jest",
+  "testing.openTesting": "neverOpen",
+  "testing.automaticallyOpenTestResults": "neverOpen",
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.suggest.autoImports": true,
+  "files.associations": {
+    "*.test.ts": "typescript",
+    "*.spec.ts": "typescript",
+    "*.test.tsx": "typescriptreact",
+    "*.spec.tsx": "typescriptreact"
+  },
+  "files.exclude": {
+    "**/coverage": true,
+    "**/node_modules": true
+  }
+}

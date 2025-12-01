@@ -1,0 +1,319 @@
+/**
+ * Test Runner Configuration for Authentication API Tests
+ * 
+ * This file provides utilities to run all authentication tests
+ * and generate test reports.
+ */
+
+import { execSync } from 'child_process';
+import { writeFileSync, readFileSync } from 'fs';
+import { join } from 'path';
+
+interface TestResult {
+  suite: string;
+  tests: number;
+  passed: number;
+  failed: number;
+  duration: number;
+}
+
+interface TestReport {
+  timestamp: string;
+  totalTests: number;
+  totalPassed: number;
+  totalFailed: number;
+  totalDuration: number;
+  suites: TestResult[];
+  coverage?: {
+    statements: number;
+    branches: number;
+    functions: number;
+    lines: number;
+  };
+}
+
+export class AuthTestRunner {
+  private static testFiles = [
+    'auth-api.test.ts',
+    'token-manager.test.ts', 
+    'verification-api.test.ts',
+    'middleware.test.ts',
+    'integration.test.ts'
+  ];
+
+  /**
+   * Run all authentication tests
+   */
+  static async runAllTests(): Promise<TestReport> {
+    console.log('🧪 Running Authentication API Test Suite...\n');
+    
+    const report: TestReport = {
+      timestamp: new Date().toISOString(),
+      totalTests: 0,
+      totalPassed: 0,
+      totalFailed: 0,
+      totalDuration: 0,
+      suites: []
+    };
+
+    const startTime = Date.now();
+
+    try {
+      // Run tests with Vitest
+      const command = 'npx vitest run src/api/authentication/__tests__ --reporter=json --coverage';
+      execSync(command, { 
+        cwd: process.cwd(),
+        encoding: 'utf-8',
+        stdio: 'pipe'
+      });
+
+      // Parse test results (simplified - actual parsing would be more complex)
+      for (const testFile of this.testFiles) {
+        const suiteResult: TestResult = {
+          suite: testFile,
+          tests: 0,
+          passed: 0,
+          failed: 0,
+          duration: 0
+        };
+        
+        report.suites.push(suiteResult);
+      }
+
+      report.totalDuration = Date.now() - startTime;
+
+      // Generate test report
+      this.generateReport(report);
+      
+      console.log('✅ All authentication tests completed successfully!');
+      return report;
+
+    } catch (error) {
+      console.error('❌ Test execution failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run a specific test file
+   */
+  static async runTestFile(filename: string): Promise<void> {
+    if (!this.testFiles.includes(filename)) {
+      throw new Error(`Test file ${filename} not found in authentication test suite`);
+    }
+
+    console.log(`🧪 Running ${filename}...`);
+    
+    try {
+      const command = `npx vitest run src/api/authentication/__tests__/${filename}`;
+      execSync(command, { 
+        cwd: process.cwd(),
+        stdio: 'inherit'
+      });
+      
+      console.log(`✅ ${filename} completed successfully!`);
+    } catch (error) {
+      console.error(`❌ ${filename} failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run tests with coverage
+   */
+  static async runWithCoverage(): Promise<void> {
+    console.log('🧪 Running Authentication Tests with Coverage...\n');
+    
+    try {
+      const command = 'npx vitest run src/api/authentication/__tests__ --coverage --reporter=verbose';
+      execSync(command, { 
+        cwd: process.cwd(),
+        stdio: 'inherit'
+      });
+      
+      console.log('✅ Coverage report generated!');
+      console.log('📊 Check coverage/ directory for detailed report');
+    } catch (error) {
+      console.error('❌ Coverage test failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run tests in watch mode for development
+   */
+  static async runWatchMode(): Promise<void> {
+    console.log('👀 Running Authentication Tests in Watch Mode...\n');
+    console.log('Press Ctrl+C to stop watching\n');
+    
+    try {
+      const command = 'npx vitest src/api/authentication/__tests__ --watch';
+      execSync(command, { 
+        cwd: process.cwd(),
+        stdio: 'inherit'
+      });
+    } catch (error) {
+      console.error('❌ Watch mode failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate a detailed test report
+   */
+  private static generateReport(report: TestReport): void {
+    const reportContent = `# Authentication API Test Report
+
+## Summary
+- **Timestamp:** ${report.timestamp}
+- **Total Tests:** ${report.totalTests}
+- **Passed:** ${report.totalPassed} ✅
+- **Failed:** ${report.totalFailed} ❌
+- **Duration:** ${report.totalDuration}ms
+
+## Test Suites
+
+${report.suites.map(suite => `
+### ${suite.suite}
+- Tests: ${suite.tests}
+- Passed: ${suite.passed} ✅
+- Failed: ${suite.failed} ${suite.failed > 0 ? '❌' : ''}
+- Duration: ${suite.duration}ms
+`).join('')}
+
+## Coverage Report
+${report.coverage ? `
+- **Statements:** ${report.coverage.statements}%
+- **Branches:** ${report.coverage.branches}%
+- **Functions:** ${report.coverage.functions}%
+- **Lines:** ${report.coverage.lines}%
+` : 'Coverage data not available'}
+
+---
+*Report generated by AuthTestRunner*
+`;
+
+    const reportPath = join(process.cwd(), 'auth-test-report.md');
+    writeFileSync(reportPath, reportContent);
+    
+    console.log(`📊 Test report generated: ${reportPath}`);
+  }
+
+  /**
+   * Validate test environment
+   */
+  static validateEnvironment(): boolean {
+    const requiredDeps = [
+      'vitest',
+      '@vitest/ui',
+      'jsdom'
+    ];
+
+    console.log('🔍 Validating test environment...');
+
+    try {
+      // Check if Vitest is available
+      execSync('npx vitest --version', { stdio: 'pipe' });
+      console.log('✅ Vitest is available');
+
+      // Check package.json for required dependencies
+      const packageJsonPath = join(process.cwd(), 'package.json');
+      const packageJsonContent = readFileSync(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent);
+      const allDeps = {
+        ...packageJson.dependencies || {},
+        ...packageJson.devDependencies || {}
+      };
+
+      for (const dep of requiredDeps) {
+        if (allDeps[dep]) {
+          console.log(`✅ ${dep} is installed`);
+        } else {
+          console.log(`⚠️  ${dep} is not installed`);
+        }
+      }
+
+      console.log('✅ Environment validation completed');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Environment validation failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Show test statistics
+   */
+  static showTestStats(): void {
+    console.log(`
+📊 Authentication API Test Suite Statistics
+
+Test Files: ${this.testFiles.length}
+├── auth-api.test.ts (Core API functionality)
+├── token-manager.test.ts (Token management)  
+├── verification-api.test.ts (Verification flows)
+├── middleware.test.ts (Request middleware)
+└── integration.test.ts (End-to-end flows)
+
+Coverage Areas:
+├── User Registration & Login
+├── JWT Token Management
+├── Email & Phone Verification
+├── Seller Verification
+├── Password Management
+├── Profile Management
+├── Request Middleware
+├── Authentication Guards
+├── Error Handling
+└── Integration Flows
+
+Run Commands:
+├── npm test                    (Run all tests)
+├── npm run test:auth          (Run auth tests only)
+├── npm run test:coverage      (Run with coverage)
+└── npm run test:watch         (Watch mode)
+`);
+  }
+}
+
+// CLI interface when run directly
+if (require.main === module) {
+  const command = process.argv[2];
+  
+  switch (command) {
+    case 'all':
+      AuthTestRunner.runAllTests();
+      break;
+    case 'coverage':
+      AuthTestRunner.runWithCoverage();
+      break;
+    case 'watch':
+      AuthTestRunner.runWatchMode();
+      break;
+    case 'validate':
+      AuthTestRunner.validateEnvironment();
+      break;
+    case 'stats':
+      AuthTestRunner.showTestStats();
+      break;
+    default:
+      console.log(`
+🧪 Authentication Test Runner
+
+Usage: node test-runner.js [command]
+
+Commands:
+  all        Run all authentication tests
+  coverage   Run tests with coverage report
+  watch      Run tests in watch mode
+  validate   Validate test environment
+  stats      Show test suite statistics
+
+Examples:
+  node test-runner.js all
+  node test-runner.js coverage
+  node test-runner.js watch
+`);
+  }
+}

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ItemCard } from "@/components/item-card"
+import { Button } from "@/components/Button"
+import { Input } from "@/components/Input"
+import { ItemCard } from "@/components/ItemCard"
 import { formatPrice, Product } from "@/lib/data"
 import { Search, Star, TrendingUp } from "lucide-react"
 import Image from "next/image"

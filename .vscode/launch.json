@@ -1,0 +1,115 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Jest Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand", "--no-cache", "--no-coverage"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "disableOptimisticBPs": true,
+      "windows": {
+        "program": "${workspaceFolder}/node_modules/jest/bin/jest"
+      },
+      "env": {
+        "NODE_ENV": "test"
+      }
+    },
+    {
+      "name": "Debug Current Jest Test",
+      "type": "node", 
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand", "--no-cache", "--no-coverage", "${relativeFile}"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "disableOptimisticBPs": true,
+      "windows": {
+        "program": "${workspaceFolder}/node_modules/jest/bin/jest"
+      },
+      "env": {
+        "NODE_ENV": "test"
+      }
+    },
+    {
+      "name": "Debug Storybook (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:6006",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${workspaceFolder}/*",
+        "webpack:///src/*": "${workspaceFolder}/src/*",
+        "webpack:///*": "*",
+        "/./*": "${workspaceFolder}/*"
+      },
+      "preLaunchTask": "npm: storybook",
+      "postDebugTask": "Kill Storybook",
+      "smartStep": true,
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/**",
+        "webpack://**"
+      ],
+      "trace": true,
+      "pathMapping": {
+        "/src": "${workspaceFolder}/src"
+      }
+    },
+    {
+      "name": "Debug Storybook (Server)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/storybook",
+      "args": ["dev", "-p", "6006", "--debug-webpack"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "Attach to Running Storybook",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "${workspaceFolder}",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "Debug Storybook (Manual Start)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:6006",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${workspaceFolder}/*",
+        "webpack:///src/*": "${workspaceFolder}/src/*",
+        "webpack:///*": "*",
+        "/./*": "${workspaceFolder}/*"
+      },
+      "smartStep": true,
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/**"
+      ],
+      "trace": true,
+      "pathMapping": {
+        "/src": "${workspaceFolder}/src"
+      }
+    }
+  ]
+}
