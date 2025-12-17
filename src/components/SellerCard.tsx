@@ -17,7 +17,7 @@ export function SellerCard({ seller }: SellerCardProps) {
           <div className="flex items-start space-x-4">
             <div className="relative">
               <Image
-                src={seller.avatar || "/placeholder-avatar.jpg"}
+                src={seller.avatar || "/placeholder-avatar.svg"}
                 alt={seller.name}
                 width={60}
                 height={60}

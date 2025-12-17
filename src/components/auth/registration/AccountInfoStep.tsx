@@ -33,8 +33,10 @@ export const AccountInfoStep: React.FC<AccountInfoStepProps> = ({
     onFieldChange(field, value)
   }
 
-  const handleFieldBlur = (field: keyof typeof formData) => () => {
-    onFieldBlur(field)
+  const handleFieldBlur = (field: keyof typeof formData) => (
+    e: React.FocusEvent<HTMLInputElement>
+  ) => {
+    onFieldBlur(field, e.target.value)
   }
 
   const getFieldError = (field: keyof typeof formData) => {

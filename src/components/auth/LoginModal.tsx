@@ -62,8 +62,14 @@ function RegistrationForm({ onClose, onSwitchToLogin, onSuccess }: RegistrationF
     }))
   }, [])
 
-  const handleFieldBlur = useCallback((field: keyof RegistrationFormData) => {
-    const validation = validateField(field, formData[field], formData)
+  // Accept optional value to validate against the latest input (useful when validating immediately after change)
+  const handleFieldBlur = useCallback((field: keyof RegistrationFormData, value?: any) => {
+    const val = value !== undefined ? value : formData[field]
+    // Validate using a snapshot of formData with the potentially updated field value
+    const validation = validateField(field, val, { ...formData, [field]: val })
+    // TEMP LOG: help debugging why some fields aren't validating (remove in prod)
+    // eslint-disable-next-line no-console
+    console.log('[Registration] validateField', { field, val, validation })
     setValidationState(prev => ({
       ...prev,
       [field]: validation

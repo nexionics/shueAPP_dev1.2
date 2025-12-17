@@ -1,17 +1,21 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { Button } from '@/components/Button'
 import { Progress } from '@/components/ui/progress'
 import { RegistrationFormData, FormValidationState, RegistrationStep } from './types'
 import { validateField, isStepValid } from './validation'
+import { useFormik } from 'formik'
+import { registrationSchema } from './schema'
 import { AccountInfoStep } from './AccountInfoStep'
 import { LocationInfoStep } from './LocationInfoStep'
 import { PreferencesStep } from './PreferencesStep'
 import { LegalStep } from './LegalStep'
+import { IdentityVerificationStep } from './IdentityVerificationStep'
 import { CheckCircle, X, ArrowLeft, ArrowRight } from 'lucide-react'
 import { asModal } from '@/components/hoc'
 import { register } from '@/api/authentication'
+import { verifySeller, verifySellerMultipart } from '@/api/authentication/verification'
 
 interface RegistrationModalProps {
   isOpen: boolean
@@ -24,7 +28,8 @@ const STEP_TITLES = {
   1: 'Account Information',
   2: 'Location Details',
   3: 'Preferences',
-  4: 'Terms & Privacy'
+  4: 'Identity Verification',
+  5: 'Terms & Privacy'
 }
 
 const initialFormData: RegistrationFormData = {
@@ -44,6 +49,10 @@ const initialFormData: RegistrationFormData = {
   shoeSize: '',
   favoriteBrands: [],
   buyingPreference: undefined
+  ,
+  idFront: undefined,
+  idBack: undefined,
+  idParsed: undefined
 }
 
 const RegistrationForm: React.FC<RegistrationModalProps> = ({
@@ -55,15 +64,101 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
   const [currentStep, setCurrentStep] = useState<RegistrationStep>(1)
   const [isLoading, setIsLoading] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
-  const [formData, setFormData] = useState<RegistrationFormData>(initialFormData)
-  const [validationState, setValidationState] = useState<FormValidationState>({} as FormValidationState)
+
+  const formik = useFormik<RegistrationFormData>({
+    initialValues: initialFormData,
+    validationSchema: registrationSchema,
+    validateOnBlur: true,
+    validateOnChange: true,
+    onSubmit: async (values) => {
+      setIsLoading(true)
+      try {
+        // Run legacy field-level validation to compute a shaped validationState
+        const finalValidation = {} as FormValidationState
+        Object.keys(values).forEach(key => {
+          const field = key as keyof RegistrationFormData
+          finalValidation[field] = validateField(field, (values as any)[field], values)
+        })
+
+        // If any step invalid, navigate to first invalid and bail
+        const allStepsValid = [1, 2, 3, 4].every(step => isStepValid(step, values, finalValidation))
+        if (!allStepsValid) {
+          for (let step = 1; step <= 4; step++) {
+            if (!isStepValid(step, values, finalValidation)) {
+              setCurrentStep(step as RegistrationStep)
+              break
+            }
+          }
+          return
+        }
+
+        const result = await register(values)
+        if (result.success) {
+          // If user registered as a seller, immediately submit seller verification data
+          const wantsToSell = values.buyingPreference === 'selling' || values.buyingPreference === 'both'
+          if (wantsToSell) {
+            try {
+              // Build multipart form data. Convert data URLs to blobs where necessary.
+              const fd = new FormData()
+              fd.append('fullName', values.fullName)
+              fd.append('email', values.email)
+              fd.append('phoneNumber', values.phoneNumber)
+              if (values.idParsed) fd.append('idParsed', JSON.stringify(values.idParsed))
+
+              const dataURLtoBlob = (dataUrl: string | undefined, filename = 'image.jpg') => {
+                if (!dataUrl) return null
+                // If it's already a File-ish string (unlikely), try to skip; otherwise convert data URL
+                if (dataUrl.startsWith('data:')) {
+                  const arr = dataUrl.split(',')
+                  const mimeMatch = arr[0].match(/:(.*?);/)
+                  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
+                  const bstr = atob(arr[1])
+                  let n = bstr.length
+                  const u8arr = new Uint8Array(n)
+                  while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n)
+                  }
+                  return new File([u8arr], filename, { type: mime })
+                }
+                return null
+              }
+
+              const frontFile = dataURLtoBlob(values.idFront, 'id-front.jpg')
+              const backFile = dataURLtoBlob(values.idBack, 'id-back.jpg')
+              if (frontFile) fd.append('idFront', frontFile)
+              if (backFile) fd.append('idBack', backFile)
+
+              // Fire-and-forget multipart verification; log if it fails
+              verifySellerMultipart(fd).then(res => {
+                if (!res.success) console.warn('Seller verification initiation failed', res)
+              }).catch(err => console.error('Seller verification (multipart) error', err))
+            } catch (err) {
+              console.error('Failed to initiate seller verification (multipart):', err)
+            }
+          }
+
+          setRegistrationSuccess(true)
+          setTimeout(() => {
+            onSuccess?.(values)
+            handleClose()
+          }, 2000)
+        } else {
+          console.error('Registration failed:', result.message || result.error)
+          throw new Error(result.message || result.error || 'Registration failed')
+        }
+      } catch (error) {
+        console.error('Registration failed:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  })
 
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1)
-      setFormData(initialFormData)
-      setValidationState({} as FormValidationState)
+      formik.resetForm()
       setRegistrationSuccess(false)
       setIsLoading(false)
     }
@@ -72,9 +167,9 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
   // Save form data to localStorage for recovery
   useEffect(() => {
     if (isOpen) {
-      localStorage.setItem('shueapp_full_registration_draft', JSON.stringify(formData))
+      localStorage.setItem('shueapp_full_registration_draft', JSON.stringify(formik.values))
     }
-  }, [formData, isOpen])
+  }, [formik.values, isOpen])
 
   // Load draft data on mount
   useEffect(() => {
@@ -83,7 +178,7 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
       if (draft) {
         try {
           const draftData = JSON.parse(draft)
-          setFormData(prev => ({ ...prev, ...draftData }))
+          formik.setValues(prev => ({ ...prev, ...draftData }))
         } catch (error) {
           console.warn('Failed to load registration draft:', error)
         }
@@ -92,27 +187,27 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
   }, [isOpen])
 
   const handleFieldChange = useCallback((field: keyof RegistrationFormData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }, [])
+    // Formik handles value + validation
+    formik.setFieldValue(field as string, value)
+  }, [formik])
 
-  const handleFieldBlur = useCallback((field: keyof RegistrationFormData) => {
-    const validation = validateField(field, formData[field], formData)
-    setValidationState(prev => ({
-      ...prev,
-      [field]: validation
-    }))
-  }, [formData])
+  const handleFieldBlur = useCallback((field: keyof RegistrationFormData, value?: any) => {
+    if (value !== undefined) {
+      formik.setFieldValue(field as string, value)
+    }
+    formik.setFieldTouched(field as string, true)
+    formik.validateField(field as string)
+  }, [formik])
 
   const handleNext = useCallback(() => {
-    if (currentStep < 4) {
+    const wantsToSell = formik.values.buyingPreference === 'selling' || formik.values.buyingPreference === 'both'
+    const maxStep = wantsToSell ? 5 : 4
+    if (currentStep < maxStep) {
       setCurrentStep(prev => (prev + 1) as RegistrationStep)
     } else {
-      handleSubmitRegistration()
+      formik.submitForm()
     }
-  }, [currentStep])
+  }, [currentStep, formik])
 
   const handlePrevious = useCallback(() => {
     if (currentStep > 1) {
@@ -121,58 +216,8 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
   }, [currentStep])
 
   const handleSubmitRegistration = async () => {
-    setIsLoading(true)
-    
-    try {
-      // Validate all required fields one more time
-      const finalValidation = {} as FormValidationState
-      Object.keys(formData).forEach(key => {
-        const field = key as keyof RegistrationFormData
-        finalValidation[field] = validateField(field, formData[field], formData)
-      })
-      
-      setValidationState(finalValidation)
-      
-      // Check if all steps are valid
-      const allStepsValid = [1, 2, 3, 4].every(step => 
-        isStepValid(step, formData, finalValidation)
-      )
-      
-      if (!allStepsValid) {
-        // Find first invalid step and go there
-        for (let step = 1; step <= 4; step++) {
-          if (!isStepValid(step, formData, finalValidation)) {
-            setCurrentStep(step as RegistrationStep)
-            break
-          }
-        }
-        return
-      }
-
-      // Call the actual registration API
-      const result = await register(formData)
-      
-      if (result.success) {
-        // Success!
-        setRegistrationSuccess(true)
-        
-        // Call success callback after a short delay
-        setTimeout(() => {
-          onSuccess?.(formData)
-          handleClose()
-        }, 2000)
-      } else {
-        // Handle registration error
-        console.error('Registration failed:', result.message || result.error)
-        throw new Error(result.message || result.error || 'Registration failed')
-      }
-      
-    } catch (error) {
-      console.error('Registration failed:', error)
-      // Handle registration error here
-    } finally {
-      setIsLoading(false)
-    }
+    // keep compatibility for any external callers; simply delegate to formik
+    await formik.submitForm()
   }
 
   const handleClose = useCallback(() => {
@@ -184,13 +229,31 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
   }, [isLoading, onClose])
 
   const getProgressPercentage = () => {
-    return (currentStep / 4) * 100
+    const wantsToSell = formik.values.buyingPreference === 'selling' || formik.values.buyingPreference === 'both'
+    const total = wantsToSell ? 5 : 4
+    return (currentStep / total) * 100
   }
+
+  // Derive a FormValidationState shape from Formik errors/touched for legacy steps
+  const derivedValidationState = useMemo(() => {
+    const vs = {} as FormValidationState
+    ;(Object.keys(initialFormData) as Array<keyof RegistrationFormData>).forEach(k => {
+      const error = (formik.errors as any)[k]
+      const touched = (formik.touched as any)[k]
+      vs[k] = {
+        isValid: !error,
+        error: error as string | undefined,
+        isRequired: true,
+        hasBeenTouched: !!touched
+      }
+    })
+    return vs
+  }, [formik.errors, formik.touched, formik.values])
 
   const renderCurrentStep = () => {
     const stepProps = {
-      formData,
-      validationState,
+      formData: formik.values,
+      validationState: derivedValidationState,
       onFieldChange: handleFieldChange,
       onFieldBlur: handleFieldBlur,
       onNext: handleNext,
@@ -206,6 +269,12 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
       case 3:
         return <PreferencesStep {...stepProps} />
       case 4:
+        // If user wants to sell, step 4 is identity verification
+        if (formik.values.buyingPreference === 'selling' || formik.values.buyingPreference === 'both') {
+          return <IdentityVerificationStep {...stepProps} />
+        }
+        return <LegalStep {...stepProps} />
+      case 5:
         return <LegalStep {...stepProps} />
       default:
         return null
@@ -227,7 +296,7 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
           </p>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              A verification email has been sent to <strong>{formData.email}</strong>
+              A verification email has been sent to <strong>{formik.values.email}</strong>
             </p>
             <p className="text-sm text-muted-foreground">
               Please verify your email to access all features.
@@ -261,10 +330,11 @@ const RegistrationForm: React.FC<RegistrationModalProps> = ({
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between text-xs text-muted-foreground mb-2">
-            <span>Account Info</span>
-            <span>Location</span>
-            <span>Preferences</span>
-            <span>Terms</span>
+            {(() => {
+              const wantsToSell = formik.values.buyingPreference === 'selling' || formik.values.buyingPreference === 'both'
+              const labels = wantsToSell ? ['Account Info', 'Location', 'Preferences', 'Identity', 'Terms'] : ['Account Info', 'Location', 'Preferences', 'Terms']
+              return labels.map((l, i) => <span key={i}>{l}</span>)
+            })()}
           </div>
           <Progress value={getProgressPercentage()} className="h-2" />
         </div>
@@ -332,5 +402,5 @@ export const RegistrationModalForStorybook = (props: RegistrationModalProps) => 
 }
 
 // Export additional components for testing and stories
-export { AccountInfoStep, LocationInfoStep, PreferencesStep, LegalStep }
+export { AccountInfoStep, LocationInfoStep, PreferencesStep, IdentityVerificationStep, LegalStep }
 export type { RegistrationModalProps }

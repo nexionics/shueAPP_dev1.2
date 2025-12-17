@@ -1,5 +1,4 @@
-import { within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import {  waitFor, within, userEvent } from 'storybook/test';
 import { AuthAPI } from '@/api/authentication'
 
 export const containerSuccessfulLoginPlay = async ({ canvasElement }: { canvasElement: HTMLElement }) => {

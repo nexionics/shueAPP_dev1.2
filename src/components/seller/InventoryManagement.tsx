@@ -3,7 +3,6 @@
 import { Card, CardContent } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Badge } from '@/components/Badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/Dialog'
 import { 
   Plus, 
   Edit, 
@@ -112,25 +111,10 @@ export default function InventoryManagement() {
           <h2 className="text-2xl font-bold">Inventory Management</h2>
           <p className="text-muted-foreground">Manage your sneaker collection and listings</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
-              <DialogDescription>
-                Add a new sneaker to your inventory
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-muted-foreground">Product form will be implemented here</p>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Product
+        </Button>
       </div>
 
       {/* Stats */}

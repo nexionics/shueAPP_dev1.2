@@ -10,7 +10,8 @@ import type {
 } from './types';
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE = `${API_ORIGIN.replace(/\/$/, '')}/api`
 const VERIFICATION_ENDPOINTS = {
   VERIFY_EMAIL: '/auth/verify/email',
   VERIFY_EMAIL_LEGACY: '/auth/verify-email',
@@ -51,7 +52,7 @@ class VerificationUtils {
   ): Promise<T> {
     const token = this.getAccessToken();
     
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE}${url}`, {
       headers: {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -70,7 +71,7 @@ class VerificationUtils {
     url: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE}${url}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -309,6 +310,37 @@ export class VerificationAPI {
   }
 
   /**
+   * Verify seller with multipart/form-data upload (files + metadata).
+   * Accepts a FormData instance containing fields and files.
+   */
+  static async verifySellerMultipart(formData: FormData): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      if (!VerificationUtils.isBrowser()) {
+        return { success: false, error: 'Not running in browser' };
+      }
+
+      const token = VerificationUtils.getAccessToken();
+      const response = await fetch(`${API_BASE}${VERIFICATION_ENDPOINTS.SELLER_VERIFY}`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // DO NOT set Content-Type — browser will set multipart boundary
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Seller multipart verification error:', error);
+      return {
+        success: false,
+        error: 'Network error occurred during seller verification (multipart)'
+      };
+    }
+  }
+
+  /**
    * Get seller verification status
    */
   static async getSellerVerificationStatus(userId: string): Promise<{ success: boolean; status?: Record<string, unknown>; message?: string; error?: string }> {
@@ -338,5 +370,6 @@ export const {
   resendVerification,
   getVerificationStatus,
   verifySeller,
+  verifySellerMultipart,
   getSellerVerificationStatus
 } = VerificationAPI;

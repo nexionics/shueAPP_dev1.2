@@ -6,7 +6,8 @@
  */
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE = `${API_ORIGIN.replace(/\/$/, '')}/api`
 
 // Types
 export interface RequestConfig extends RequestInit {
@@ -93,7 +94,7 @@ export class AuthMiddleware {
         return false;
       }
 
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +146,7 @@ export class AuthMiddleware {
     requestConfig.headers = headers;
 
     // Make the request
-    let response = await fetch(`${API_BASE_URL}${url}`, requestConfig);
+    let response = await fetch(`${API_BASE}${url}`, requestConfig);
 
     // Handle 401 Unauthorized - attempt token refresh and retry
     if (response.status === 401 && !skipAuth && retryOnAuthFailure) {
@@ -158,7 +159,7 @@ export class AuthMiddleware {
           const headers = new Headers(requestConfig.headers);
           headers.set('Authorization', `Bearer ${newToken}`);
           requestConfig.headers = headers;
-          response = await fetch(`${API_BASE_URL}${url}`, requestConfig);
+          response = await fetch(`${API_BASE}${url}`, requestConfig);
         }
       }
     }
@@ -255,7 +256,7 @@ export class AuthMiddleware {
       
       // Notify server (best effort)
       if (refreshToken) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
+        await fetch(`${API_BASE}/auth/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

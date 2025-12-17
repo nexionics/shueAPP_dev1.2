@@ -27,16 +27,24 @@ export const LocationInfoStep: React.FC<LocationInfoStepProps> = ({
 
   const handleSelectChange = (field: keyof typeof formData) => (value: string) => {
     onFieldChange(field, value)
+    // Validate immediately against the selected value
+    onFieldBlur(field, value)
   }
 
-  const handleFieldBlur = (field: keyof typeof formData) => () => {
-    onFieldBlur(field)
+  const handleFieldBlur = (field: keyof typeof formData) => (
+    e: React.FocusEvent<HTMLInputElement> | React.FocusEvent<any>
+  ) => {
+    // For inputs, use the event target value; for other controls the parent snapshot will be used
+    const val = (e?.target as HTMLInputElement)?.value
+    onFieldBlur(field, val)
   }
 
   const handleToggleChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     onFieldChange(field, e.target.checked)
+    // validate boolean toggle immediately
+    onFieldBlur(field, e.target.checked)
   }
 
   const getFieldError = (field: keyof typeof formData) => {

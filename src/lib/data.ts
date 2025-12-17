@@ -136,6 +136,21 @@ export function getProducts(): Product[] {
   return productsData as Product[]
 }
 
+// Server-side: fetch products from backend API when available.
+// Falls back to static `products.json` if the API is unreachable.
+export async function getProductsFromApi(limit: number = 50): Promise<Product[]> {
+  try {
+    const { fetchPopularProducts } = await import('@/api/products');
+    return await fetchPopularProducts(limit);
+  } catch (err) {
+    // On failure, return the bundled static products for a graceful fallback
+    // (useful during local dev when backend isn't running)
+    // eslint-disable-next-line no-console
+    console.warn('getProductsFromApi failed, falling back to static data:', err);
+    return productsData as Product[];
+  }
+}
+
 export function getSellers(): Seller[] {
   return sellersData as Seller[]
 }

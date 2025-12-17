@@ -58,15 +58,15 @@ function getPlaceholderImage(productName: string, brand: string) {
   const productLower = productName.toLowerCase()
   
   if (brandLower.includes('jordan') || productLower.includes('jordan')) {
-    return '/placeholder-jordan.jpg'
+    return '/placeholder-jordan.svg'
   } else if (brandLower.includes('nike') || productLower.includes('nike')) {
-    return '/placeholder-nike.jpg'
+    return '/placeholder-nike.svg'
   } else if (brandLower.includes('adidas') || productLower.includes('yeezy')) {
-    return '/placeholder-adidas.jpg'
+    return '/placeholder-adidas.svg'
   } else if (brandLower.includes('new balance')) {
-    return '/placeholder-newbalance.jpg'
+    return '/placeholder-newbalance.svg'
   } else {
-    return '/placeholder-shoe.jpg'
+    return '/placeholder-shoe.svg'
   }
 }
 

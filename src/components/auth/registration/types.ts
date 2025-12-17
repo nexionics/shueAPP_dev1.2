@@ -22,6 +22,10 @@ export interface RegistrationFormData {
   shoeSize?: string
   favoriteBrands?: string[]
   buyingPreference?: 'buying' | 'selling' | 'both'
+  // Identity verification (optional fields used when user is registering as a seller)
+  idFront?: string // data URL or uploaded file reference
+  idBack?: string
+  idParsed?: Record<string, string>
 }
 
 export interface FieldValidation {
@@ -39,13 +43,14 @@ export interface RegistrationStepProps {
   formData: RegistrationFormData
   validationState: FormValidationState
   onFieldChange: (field: keyof RegistrationFormData, value: any) => void
-  onFieldBlur: (field: keyof RegistrationFormData) => void
+  // Accept optional value to allow immediate validation against a newly provided value
+  onFieldBlur: (field: keyof RegistrationFormData, value?: any) => void
   onNext: () => void
   onPrevious: () => void
   isLoading?: boolean
 }
 
-export type RegistrationStep = 1 | 2 | 3 | 4
+export type RegistrationStep = 1 | 2 | 3 | 4 | 5
 
 export interface RegistrationState {
   currentStep: RegistrationStep

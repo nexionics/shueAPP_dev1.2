@@ -1,4 +1,4 @@
-import { within } from '@testing-library/react'
+import { within,  } from 'storybook/test';
 
 // Test configuration for registration flow
 const TEST_CONFIG = {
@@ -10,11 +10,25 @@ const TEST_CONFIG = {
     return apiUrl
   },
   TEST_DATA: {
-    // Valid test registration data
-    fullName: 'John Test User',
-    username: 'johntestuser',
-    email: 'john.test@example.com',
-    phoneNumber: '(555) 123-4567',
+    // Valid test registration data (generated per-access to avoid collisions)
+    get fullName() {
+      return 'John Test User'
+    },
+    get username() {
+      const suffix = `${Date.now().toString(36)}${Math.floor(Math.random() * 10000).toString(36)}`
+      return `johntestuser_${suffix}`
+    },
+    get email() {
+      const suffix = `${Date.now().toString(36)}${Math.floor(Math.random() * 10000).toString(36)}`
+      return `john.test+${suffix}@example.com`
+    },
+    get phoneNumber() {
+      // Generate a random US-like phone number: (NXX) NXX-XXXX
+      const area = String(200 + Math.floor(Math.random() * 800)).padStart(3, '0')
+      const prefix = String(200 + Math.floor(Math.random() * 800)).padStart(3, '0')
+      const line = String(1000 + Math.floor(Math.random() * 9000)).padStart(4, '0')
+      return `(${area}) ${prefix}-${line}`
+    },
     password: 'SecurePass123!',
     confirmPassword: 'SecurePass123!',
     city: 'New York',

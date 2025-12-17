@@ -22,15 +22,22 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
     "@storybook/addon-actions": "^9.0.8",
+    "@zxing/library": "^0.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "formik": "^2.4.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.541.0",
+    "mapbox-gl": "^3.17.0",
     "next": "15.5.0",
     "next-themes": "^0.4.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-mapbox-gl": "^5.1.1",
     "sneaks-api": "^1.2.3",
-    "tailwind-merge": "^3.3.1"
+    "styled-components": "^6.1.19",
+    "tailwind-merge": "^3.3.1",
+    "yup": "^1.2.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.28.5",

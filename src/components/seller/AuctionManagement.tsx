@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Badge } from '@/components/Badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/Dialog'
 import { 
   Gavel, 
   Plus, 
@@ -119,25 +118,10 @@ export default function AuctionManagement() {
           <h2 className="text-2xl font-bold">Auction Management</h2>
           <p className="text-muted-foreground">Create and manage your sneaker auctions</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Auction
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Auction</DialogTitle>
-              <DialogDescription>
-                Set up a new auction for your sneaker
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-muted-foreground">Auction creation form will be implemented here</p>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Auction
+        </Button>
       </div>
 
       {/* Stats */}

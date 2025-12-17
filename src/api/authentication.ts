@@ -135,7 +135,7 @@ export const STORAGE_KEYS = {
 
 // Default configuration
 export const DEFAULT_AUTH_CONFIG = {
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
+  apiBaseUrl: (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '') + '/api',
   tokenStorageKey: 'accessToken',
   refreshTokenStorageKey: 'refreshToken',
   userStorageKey: 'user',

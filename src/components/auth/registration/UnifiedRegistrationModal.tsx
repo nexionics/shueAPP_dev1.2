@@ -97,8 +97,12 @@ const UnifiedRegistrationForm: React.FC<UnifiedRegistrationModalProps> = ({
     }))
   }, [])
 
-  const handleFieldBlur = useCallback((field: keyof RegistrationFormData) => {
-    const validation = validateField(field, formData[field], formData)
+  const handleFieldBlur = useCallback((field: keyof RegistrationFormData, value?: any) => {
+    const val = value !== undefined ? value : formData[field]
+    const validation = validateField(field, val, { ...formData, [field]: val })
+    // TEMP LOG for debugging
+    // eslint-disable-next-line no-console
+    console.log('[UnifiedRegistrationModal] validateField', { field, val, validation })
     setValidationState(prev => ({
       ...prev,
       [field]: validation

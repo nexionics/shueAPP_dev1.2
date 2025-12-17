@@ -1,48 +1,56 @@
 import Image from "next/image"
 import Link from "next/link"
+import styled from 'styled-components'
 import { Card, CardContent } from "@/components/Card"
-import { Product, formatPrice } from "@/lib/data"
+import { Product } from "@/lib/data"
+import DefaultItemDetails from './ItemCardDetails'
 
 interface ItemCardProps {
   product: Product
+  children?: React.ReactNode
 }
 
-export function ItemCard({ product }: ItemCardProps) {
-  const minPrice = Math.min(...product.sizes.map(s => s.price))
-  const maxPrice = Math.max(...product.sizes.map(s => s.price))
-  
+const DEFAULT_CARD_CLASSES = 'cursor-pointer overflow-hidden transition-all hover:shadow-lg max-w-[17.5rem]'
+const DEFAULT_CARDCONTENT_CLASSES = 'p-4'
+const DEFAULT_IMAGE_WRAPPER = ''
+
+const StyledCard = styled(Card).attrs<{ className?: string }>(props => ({
+  className: `${DEFAULT_CARD_CLASSES} ${props.className ?? ''}`
+}))`
+  height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: initial;
+  justify-content: space-between;
+`
+
+const StyledCardContent = styled(CardContent).attrs<{ className?: string }>(props => ({
+  className: `${DEFAULT_CARDCONTENT_CLASSES} ${props.className ?? ''}`
+}))``
+
+const ImageWrapper = styled.div.attrs<{ className?: string }>(props => ({
+  className: `${DEFAULT_IMAGE_WRAPPER} ${props.className ?? ''}`
+}))`
+  width: 100%;
+  max-width: 280px;
+`
+
+export function ItemCard({ product, children }: ItemCardProps) {
   return (
     <Link href={`/p/${product.id}`}>
-      <Card className="group cursor-pointer overflow-hidden transition-all hover:shadow-lg">
-        <div className="aspect-square relative overflow-hidden">
+      <StyledCard>
+        <ImageWrapper>
           <Image
-            src={product.images[0] || "/placeholder-shoe.jpg"}
+            src={product.images[0] || product.thumbnail || "/placeholder-shoe.svg"}
             alt={product.name}
-            fill
-            className="object-cover transition-transform group-hover:scale-105"
+            width={280}
+            height={320}
           />
-        </div>
-        <CardContent className="p-4">
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">{product.brand}</div>
-            <h3 className="font-semibold line-clamp-2 group-hover:text-primary">
-              {product.name}
-            </h3>
-            <div className="text-sm text-muted-foreground">{product.colorway}</div>
-            <div className="flex items-center justify-between">
-              <div className="font-bold">
-                {minPrice === maxPrice 
-                  ? formatPrice(minPrice)
-                  : `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`
-                }
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {product.sizes.length} sizes
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </ImageWrapper>
+        <StyledCardContent>
+          {children ?? <DefaultItemDetails product={product} />}
+        </StyledCardContent>
+      </StyledCard>
     </Link>
   )
 }

@@ -30,6 +30,7 @@ const config: StorybookConfig = {
       ...config.experiments,
       topLevelAwait: true,
     };
+
     
     return config;
   },
@@ -39,6 +40,7 @@ const config: StorybookConfig = {
   env: (config) => ({
     ...config,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
   }),
 };
 export default config;

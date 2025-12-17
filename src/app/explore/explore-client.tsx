@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from "@/components/Button"
 import { Input } from "@/components/Input"
 import { ItemCard } from "@/components/ItemCard"
 import { formatPrice, Product } from "@/lib/data"
 import { Search, Star, TrendingUp } from "lucide-react"
 import Image from "next/image"
+import { searchProducts } from '@/api/sneakers'
 
 interface FloatingOrb {
   id: string
@@ -112,83 +113,207 @@ export function ExploreClient({ sections }: ExploreClientProps) {
   const [isSearching, setIsSearching] = useState(false)
   const [floatingOrbs, setFloatingOrbs] = useState<FloatingOrb[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  
+  const searchAbortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    if (sections && typeof window !== 'undefined') {
-      const orbs: FloatingOrb[] = sections.featuredProducts.slice(0, 8).map((product: Product) => ({
-        id: product.id,
-        product,
-        x: Math.random() * (window.innerWidth - 200),
-        y: Math.random() * (window.innerHeight - 200) + 100,
-        size: 80 + Math.random() * 40,
-        velocity: {
-          x: (Math.random() - 0.5) * 2,
-          y: (Math.random() - 0.5) * 2
-        },
-        rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 2
-      }))
-      setFloatingOrbs(orbs)
-    }
-  }, [sections])
+  // useEffect(() => {
+  //   // Initialize floating orbs based on images found in /public/bubbles
+  //   if (typeof window === 'undefined') return
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
+  //   const extensions = ['png', 'jpg', 'jpeg', 'webp', 'avif']
+  //   const maxCandidates = 12
+  //   const maxBubbles = 6
 
-    const animateOrbs = () => {
-      setFloatingOrbs(prevOrbs => 
-        prevOrbs.map(orb => {
-          let newX = orb.x + orb.velocity.x
-          let newY = orb.y + orb.velocity.y
-          let newVelX = orb.velocity.x
-          let newVelY = orb.velocity.y
+  //   // Try both naming conventions: `bubble{n}.{ext}` and `{n}.{ext}`
+  //   const candidatePaths: string[] = []
+  //   for (let i = 1; i <= maxCandidates; i++) {
+  //     for (const ext of extensions) {
+  //       candidatePaths.push(`/bubbles/bubble${i}.${ext}`)
+  //       candidatePaths.push(`/bubbles/${i}.${ext}`)
+  //     }
+  //   }
 
-          if (newX <= 0 || newX >= window.innerWidth - orb.size) {
-            newVelX = -newVelX
-            newX = Math.max(0, Math.min(window.innerWidth - orb.size, newX))
-          }
-          if (newY <= 100 || newY >= window.innerHeight - orb.size) {
-            newVelY = -newVelY
-            newY = Math.max(100, Math.min(window.innerHeight - orb.size, newY))
-          }
+  //   const checkImage = (url: string) =>
+  //     new Promise<boolean>((resolve) => {
+  //       // Use a DOM-created <img> element rather than `new Image()` because
+  //       // the file imports `Image` from `next/image` which shadows the global
+  //       // Image constructor in this module scope.
+  //       const img = typeof document !== 'undefined' ? document.createElement('img') : null
+  //       if (!img) return resolve(false)
+  //       img.onload = () => resolve(true)
+  //       img.onerror = () => resolve(false)
+  //       img.src = url
+  //     })
 
-          return {
-            ...orb,
-            x: newX,
-            y: newY,
-            velocity: { x: newVelX, y: newVelY },
-            rotation: orb.rotation + orb.rotationSpeed
-          }
-        })
-      )
-    }
+  //   ;(async () => {
+  //     const results = await Promise.all(
+  //       candidatePaths.map(async (p) => ({ p, ok: await checkImage(p) }))
+  //     )
 
-    const interval = setInterval(animateOrbs, 50)
-    return () => clearInterval(interval)
-  }, [])
+  //     const available = results.filter(r => r.ok).map(r => r.p)
+  //     const chosen = available.slice(0, maxBubbles)
 
-  const handleSearch = (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([])
-      return
-    }
+  //     // If no bubble images found, fall back to featured products
+  //     if (chosen.length === 0 && sections && sections.featuredProducts?.length) {
+  //       const orbs: FloatingOrb[] = sections.featuredProducts.slice(0, 6).map((product: Product) => ({
+  //         id: product.id,
+  //         product,
+  //         x: Math.random() * (window.innerWidth - 200),
+  //         y: Math.random() * (window.innerHeight - 200) + 100,
+  //         size: 80 + Math.random() * 40,
+  //         velocity: {
+  //           x: (Math.random() - 0.5) * 2,
+  //           y: (Math.random() - 0.5) * 2
+  //         },
+  //         rotation: Math.random() * 360,
+  //         rotationSpeed: (Math.random() - 0.5) * 2
+  //       }))
+  //       setFloatingOrbs(orbs)
+  //       return
+  //     }
 
-    setIsSearching(true)
-    try {
-      const allProducts = sections?.featuredProducts || []
-      const results = allProducts.filter((product: Product) => 
-        product.name.toLowerCase().includes(query.toLowerCase()) ||
-        product.brand.toLowerCase().includes(query.toLowerCase()) ||
-        product.colorway.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 12)
-      setSearchResults(results)
-    } catch (error) {
-      console.error('Search failed:', error)
-      setSearchResults([])
-    } finally {
-      setIsSearching(false)
-    }
-  }
+  //     const orbs: FloatingOrb[] = chosen.map((path, idx) => {
+  //       const fakeProduct: Product = {
+  //         id: `bubble-${idx}-${path}`,
+  //         name: path.split('/').pop() || `bubble-${idx}`,
+  //         brand: 'Bubbles',
+  //         colorway: 'Gradient',
+  //         releaseDate: new Date().toISOString(),
+  //         retailPrice: 0,
+  //         images: [path],
+  //         sizes: [{ size: 'One Size', price: 0 }],
+  //         category: 'bubble',
+  //         condition: 'new',
+  //         sellerId: 'system'
+  //       }
+
+  //       return {
+  //         id: fakeProduct.id,
+  //         product: fakeProduct,
+  //         x: Math.random() * (window.innerWidth - 200),
+  //         y: Math.random() * (window.innerHeight - 200) + 100,
+  //         size: 80 + Math.random() * 40,
+  //         velocity: {
+  //           x: (Math.random() - 0.5) * 2,
+  //           y: (Math.random() - 0.5) * 2
+  //         },
+  //         rotation: Math.random() * 360,
+  //         rotationSpeed: (Math.random() - 0.5) * 2
+  //       }
+  //     })
+
+  //     setFloatingOrbs(orbs)
+  //   })()
+  // }, [sections])
+
+  // useEffect(() => {
+  //   if (typeof window === 'undefined') return
+
+  //   const animateOrbs = () => {
+  //     setFloatingOrbs(prevOrbs => 
+  //       prevOrbs.map(orb => {
+  //         let newX = orb.x + orb.velocity.x
+  //         let newY = orb.y + orb.velocity.y
+  //         let newVelX = orb.velocity.x
+  //         let newVelY = orb.velocity.y
+
+  //         if (newX <= 0 || newX >= window.innerWidth - orb.size) {
+  //           newVelX = -newVelX
+  //           newX = Math.max(0, Math.min(window.innerWidth - orb.size, newX))
+  //         }
+  //         if (newY <= 100 || newY >= window.innerHeight - orb.size) {
+  //           newVelY = -newVelY
+  //           newY = Math.max(100, Math.min(window.innerHeight - orb.size, newY))
+  //         }
+
+  //         return {
+  //           ...orb,
+  //           x: newX,
+  //           y: newY,
+  //           velocity: { x: newVelX, y: newVelY },
+  //           rotation: orb.rotation + orb.rotationSpeed
+  //         }
+  //       })
+  //     )
+  //   }
+
+  //   const interval = setInterval(animateOrbs, 50)
+  //   return () => clearInterval(interval)
+  // }, [])
+
+  // // Previously fetched trending here — removed because Popular items are now rendered
+  // // under the server-side "Popular Right Now" section. Keep the state available
+  // // in case we reintroduce client-driven features.
+
+  // // Debounced remote search using the Sneakers API
+  // useEffect(() => {
+  //   if (typeof window === 'undefined') return
+
+  //   // if empty, clear results and skip (also abort any in-flight search)
+  //   if (!searchQuery.trim()) {
+  //     setSearchResults([])
+  //     setIsSearching(false)
+  //     if (searchAbortRef.current) {
+  //       searchAbortRef.current.abort()
+  //       searchAbortRef.current = null
+  //     }
+  //     return
+  //   }
+
+  //   setIsSearching(true)
+  //   const timer = setTimeout(() => {
+  //     ;(async () => {
+  //       // Abort any previous in-flight fetch before starting a new one
+  //       if (searchAbortRef.current) {
+  //         searchAbortRef.current.abort()
+  //         searchAbortRef.current = null
+  //       }
+
+  //       const controller = new AbortController()
+  //       searchAbortRef.current = controller
+
+  //       try {
+  //         const res = await searchProducts(searchQuery, 12, controller.signal)
+  //         if (res && Array.isArray(res.data)) {
+  //           // Keep types compatible with existing ItemCard which expects Product from lib/data
+  //           setSearchResults(res.data as any)
+  //         } else {
+  //           setSearchResults([])
+  //         }
+  //       } catch (err: any) {
+  //         // If the request was aborted, silently ignore
+  //         if (err && err.name === 'AbortError') {
+  //           return
+  //         }
+  //         console.error('Remote search failed:', err)
+  //         // fallback: try local featuredProducts search as graceful degradation
+  //         try {
+  //           const allProducts = sections?.featuredProducts || []
+  //           const results = allProducts.filter((product: Product) => 
+  //             (product.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //             (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //             (product.colorway || '').toLowerCase().includes(searchQuery.toLowerCase())
+  //           ).slice(0, 12)
+  //           setSearchResults(results)
+  //         } catch (e) {
+  //           setSearchResults([])
+  //         }
+  //       } finally {
+  //         setIsSearching(false)
+  //         // clear ref if this controller is still current
+  //         if (searchAbortRef.current === controller) searchAbortRef.current = null
+  //       }
+  //     })()
+  //   }, 350)
+
+  //   return () => {
+  //     clearTimeout(timer)
+  //     if (searchAbortRef.current) {
+  //       searchAbortRef.current.abort()
+  //       searchAbortRef.current = null
+  //     }
+  //   }
+  // }, [searchQuery, sections])
 
   const categories = [
     { id: 'all', label: 'All', icon: Star },
@@ -201,7 +326,7 @@ export function ExploreClient({ sections }: ExploreClientProps) {
   return (
     <>
       {/* Floating Orbs Background */}
-      <div className="fixed inset-0 pointer-events-none z-0">
+      {/* <div className="fixed inset-0 pointer-events-none z-0">
         {floatingOrbs.map((orb) => (
           <div
             key={orb.id}
@@ -217,7 +342,7 @@ export function ExploreClient({ sections }: ExploreClientProps) {
           >
             <div className="relative w-full h-full rounded-full overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-110 bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm border border-white/20">
               <Image
-                src={orb.product.images[0] || "/placeholder-shoe.jpg"}
+                src={orb.product.images[0] || (orb.product as any).thumbnail || "/placeholder-shoe.svg"}
                 alt={orb.product.name}
                 fill
                 className="object-cover rounded-full"
@@ -233,61 +358,9 @@ export function ExploreClient({ sections }: ExploreClientProps) {
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
 
-      {/* Search and Category Section */}
-      <div className="relative z-10 pt-32">
-        <div className="text-center space-y-6 px-4">
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto relative">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-              <Input
-                type="text"
-                placeholder="Search for sneakers..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  handleSearch(e.target.value)
-                }}
-                className="pl-12 pr-4 py-6 text-lg rounded-full border-2 border-primary/20 focus:border-primary/50 bg-background/80 backdrop-blur-sm"
-              />
-            </div>
-            {isSearching && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-              </div>
-            )}
-          </div>
 
-          {/* Category Filters */}
-          <div className="flex flex-wrap justify-center gap-3 mt-8">
-            {categories.map((category) => (
-              <Button
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                onClick={() => setSelectedCategory(category.id)}
-                className="rounded-full"
-              >
-                <category.icon className="w-4 h-4 mr-2" />
-                {category.label}
-              </Button>
-            ))}
-          </div>
-
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="space-y-6 mt-12">
-              <h2 className="text-3xl font-bold">Search Results</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {searchResults.map((product) => (
-                  <ItemCard key={product.id} product={product} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </>
   )
 }

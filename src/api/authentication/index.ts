@@ -23,7 +23,8 @@ import type {
 } from './types';
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : undefined;
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE = `${API_ORIGIN.replace(/\/$/, '')}/api`
 const AUTH_ENDPOINTS = {
   LOGIN: '/auth/login',
   REGISTER: '/auth/register',
@@ -82,7 +83,7 @@ class AuthUtils {
     url: string,
     options: RequestInit = {}
   ): Promise<T> {
-    if (!API_BASE_URL) {
+    if (!API_BASE) {
       throw new Error('NEXT_PUBLIC_API_URL environment variable is not configured');
     }
     
@@ -92,7 +93,7 @@ class AuthUtils {
       throw new Error('No access token available');
     }
 
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE}${url}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -107,10 +108,10 @@ class AuthUtils {
       if (refreshResult.success) {
         // Retry with new token
         const newToken = TokenManager.getAccessToken();
-        if (!API_BASE_URL) {
+        if (!API_BASE) {
           throw new Error('NEXT_PUBLIC_API_URL environment variable is not configured');
         }
-        return await fetch(`${API_BASE_URL}${url}`, {
+        return await fetch(`${API_BASE}${url}`, {
           ...options,
           headers: {
             'Content-Type': 'application/json',
@@ -133,11 +134,11 @@ class AuthUtils {
     url: string,
     options: RequestInit = {}
   ): Promise<T> {
-    if (!API_BASE_URL) {
+    if (!API_BASE) {
       throw new Error('NEXT_PUBLIC_API_URL environment variable is not configured');
     }
     
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE}${url}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,

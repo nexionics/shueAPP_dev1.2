@@ -22,9 +22,13 @@ export const LegalStep: React.FC<LegalStepProps> = ({
   const handleToggleChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    onFieldChange(field, e.target.checked)
-    // Touch the field for validation
-    onFieldBlur(field)
+    const checked = e.target.checked
+    onFieldChange(field, checked)
+
+    // Ensure blur is triggered after click
+    setTimeout(() => {
+      onFieldBlur(field, checked)
+    }, 0)
   }
 
   const getFieldError = (field: keyof typeof formData) => {
@@ -43,6 +47,18 @@ export const LegalStep: React.FC<LegalStepProps> = ({
     // This will be the final step that triggers registration
     onNext()
   }
+  console.log({isLoading, canProceed})
+  // TEMPORARY DEBUG LOGGING
+  // eslint-disable-next-line no-console
+  console.log('[LegalStep] Render', {
+    agreeToTerms: formData.agreeToTerms,
+    validationAgree: validationState.agreeToTerms
+  })
+  console.log('[LegalStep] Debugging Validation', {
+    agreeToTerms: formData.agreeToTerms,
+    validationAgree: validationState.agreeToTerms,
+    canProceed,
+  });
 
   return (
     <div className="space-y-6">

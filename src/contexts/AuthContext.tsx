@@ -36,7 +36,7 @@ function mapJWTUserToUser(jwtUser: JWTUserPayload): User {
     firstName: jwtUser.firstName,
     lastName: jwtUser.lastName,
     role: jwtUser.role,
-    avatar: '/placeholder-avatar.jpg' // Default avatar
+    avatar: '/placeholder-avatar.svg' // Default avatar
   }
 }
 

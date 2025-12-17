@@ -6,20 +6,21 @@
  */
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE = `${API_ORIGIN.replace(/\/$/, '')}/api`
 
 /**
  * Check if the backend server is available and responding
  * @returns Promise<boolean> - true if server is healthy, false otherwise
  */
 export const checkServerHealth = async (): Promise<boolean> => {
-  if (!API_BASE_URL) {
+  if (!API_ORIGIN) {
     console.warn('NEXT_PUBLIC_API_URL is not configured')
     return false
   }
   
   try {
-    const response = await fetch(`${API_BASE_URL}/health`)
+    const response = await fetch(`${API_ORIGIN.replace(/\/$/, '')}/health`)
     return response.ok
   } catch {
     return false
@@ -31,13 +32,13 @@ export const checkServerHealth = async (): Promise<boolean> => {
  * @returns Promise<boolean> - true if auth service is healthy, false otherwise
  */
 export const checkAuthHealth = async (): Promise<boolean> => {
-  if (!API_BASE_URL) {
+  if (!API_ORIGIN) {
     console.warn('NEXT_PUBLIC_API_URL is not configured')
     return false
   }
   
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/health`)
+    const response = await fetch(`${API_BASE}/auth/health`)
     return response.ok
   } catch {
     return false
@@ -48,8 +49,8 @@ export const checkAuthHealth = async (): Promise<boolean> => {
  * Get API configuration details
  */
 export const getApiConfig = () => ({
-  baseUrl: API_BASE_URL,
-  authUrl: API_BASE_URL ? `${API_BASE_URL}/api/auth` : undefined,
-  healthEndpoint: API_BASE_URL ? `${API_BASE_URL}/health` : undefined,
-  authHealthEndpoint: API_BASE_URL ? `${API_BASE_URL}/api/auth/health` : undefined
+  baseUrl: API_ORIGIN,
+  authUrl: `${API_BASE}/auth`,
+  healthEndpoint: `${API_ORIGIN.replace(/\/$/, '')}/health`,
+  authHealthEndpoint: `${API_BASE}/auth/health`
 })
